@@ -1,2 +1,0 @@
-gpiozero>=2.0
-lgpio>=0.2

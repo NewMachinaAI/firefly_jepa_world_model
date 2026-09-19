@@ -7,3 +7,5 @@ requests==2.32.3
 numpy==2.2.1
 safetensors==0.8.0
 torch==2.13.0+cpu
+gpiozero>=2.0
+lgpio>=0.2
