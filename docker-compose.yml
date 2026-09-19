@@ -1,0 +1,103 @@
+services:
+  encoder-train:
+    build: .
+    image: newmachinaai/newmachina_firefly_encoder_train:latest
+    container_name: firefly_encoder_train
+    command: ["container_encoder_train_src/firefly_encoder_train.py"]
+    volumes:
+      - encoder-model-data:/app/encoder_model
+
+  predicter-train:
+    build: .
+    image: newmachinaai/newmachina_firefly_predicter_train:latest
+    container_name: firefly_predicter_train
+    command: ["container_predicter_train_src/firefly_predicter_train.py"]
+    volumes:
+      - predicter-model-data:/app/predicter_model
+
+  policy-train:
+    build: .
+    image: newmachinaai/newmachina_firefly_policy_train:latest
+    container_name: firefly_policy_train
+    command: ["container_policy_train_src/firefly_policy_train.py"]
+    volumes:
+      - policy-model-data:/app/policy_model
+
+  encoder-inference:
+    build: .
+    image: newmachinaai/newmachina_firefly_encoder_inference:latest
+    container_name: firefly_encoder_inference
+    command: ["container_encoder_inference_src/firefly_encoder_inference.py", "--host", "0.0.0.0"]
+    ports:
+      - "8001:8001"
+    volumes:
+      - encoder-model-data:/app/encoder_model
+    depends_on:
+      encoder-train:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  predicter-inference:
+    build: .
+    image: newmachinaai/newmachina_firefly_predicter_inference:latest
+    container_name: firefly_predicter_inference
+    command: ["container_predicter_inference_src/firefly_predicter_inference.py", "--host", "0.0.0.0"]
+    ports:
+      - "8002:8002"
+    volumes:
+      - predicter-model-data:/app/predicter_model
+    depends_on:
+      predicter-train:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  policy-inference:
+    build: .
+    image: newmachinaai/newmachina_firefly_policy_inference:latest
+    container_name: firefly_policy_inference
+    command: ["container_policy_inference_src/firefly_policy_inference.py", "--host", "0.0.0.0"]
+    ports:
+      - "8003:8003"
+    volumes:
+      - policy-model-data:/app/policy_model
+    depends_on:
+      policy-train:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  harness:
+    build: .
+    image: newmachinaai/newmachina_firefly_harness:latest
+    container_name: firefly_harness
+    command:
+      [
+        "container_harness_src/firefly_harness.py",
+        "--encoder-url", "http://encoder-inference:8001",
+        "--predicter-url", "http://predicter-inference:8002",
+        "--policy-url", "http://policy-inference:8003",
+        "--interval", "60",
+      ]
+    depends_on:
+      encoder-inference:
+        condition: service_healthy
+      predicter-inference:
+        condition: service_healthy
+      policy-inference:
+        condition: service_healthy
+
+volumes:
+  encoder-model-data:
+  predicter-model-data:
+  policy-model-data:
