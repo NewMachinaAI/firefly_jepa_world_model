@@ -18,6 +18,7 @@ sensor.when_no_line = light_detected  # Low signal = Light
 
 print("LDR Light Sensor Active. Cover/uncover sensor to test...")
 print("Press Ctrl+C to exit.")
+print("Initialize sensor state..." + str(sensor.value))
 
 try:
     pause()
