@@ -1,34 +1,20 @@
-import random
-import time
-from gpiozero import DigitalInputDevice, LED
+from gpiozero import LED
+from time import sleep
 
-# Initialize GPIO pins
-# adjust active_state if your module reads HIGH during daylight
-sensor = DigitalInputDevice(17, pull_up=False)
-firefly_led = LED(18)
+# Initialize the LED on GPIO pin 17 (BCM numbering)
+led = LED(18)
 
-print("Firefly simulation running. Press Ctrl+C to exit.")
+print("Blinking LED... Press Ctrl+C to stop.")
 
 try:
     while True:
-        # Check if sensor detects darkness
-        # Default LM393 modules output HIGH (1) in dark, LOW (0) in light
-        is_dark = sensor.value == 1
-
-        if is_dark:
-            print("Darkness detected: Flashing firefly light...")
-            firefly_led.on()
-            time.sleep(1.0)  # On for 1 second
-            firefly_led.off()
-
-            # Random pause between 2 and 5 seconds before checking again
-            delay = random.uniform(2.0, 5.0)
-            time.sleep(delay)
-        else:
-            print("Daylight detected: Firefly sleeping...")
-            firefly_led.off()
-            time.sleep(1.0)  # Check sensor every second during daylight
+        led.on()       	# Turn the LED on
+        print("LED On")
+        sleep(1)       	# Wait for 1 second
+        led.off()      	# Turn the LED off
+        print("LED Off")
+        sleep(1)       	# Wait for 1 second
 
 except KeyboardInterrupt:
-    print("\nExiting script and cleaning up GPIO.")
-    firefly_led.off()
+    # Smoothly handle exiting the program when Ctrl+C is pressed
+    print("\nProgram stopped.")
