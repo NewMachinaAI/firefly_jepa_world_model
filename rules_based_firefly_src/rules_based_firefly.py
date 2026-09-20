@@ -34,6 +34,7 @@ def scenario_tag(prev_ldr, ldr):
 
 def main():
     parser = argparse.ArgumentParser(description="Rules-based firefly with data logging.")
+    parser.add_argument("data_type", choices=["training", "validation"], help="Which dataset this run produces")
     parser.add_argument("--interval-ms", type=float, default=100.0, help="Sampling interval in ms (default 100)")
     parser.add_argument("--out-dir", default=str(Path.home() / "Documents/GitHub/firefly_jepa_world_model/data/training_data"), help="Directory for CSV output")
     args = parser.parse_args()
@@ -42,7 +43,7 @@ def main():
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     # Fixed filename, opened with "w" below: each run overwrites the previous run's samples
-    out_path = out_dir / "Firefly_Raw_Samples.csv"
+    out_path = out_dir / f"Firefly_Raw_{args.data_type.capitalize()}_Samples.csv"
 
     # Default LM393 modules output HIGH (1) in dark, LOW (0) in light.
     # Adjust DARK_LEVEL if your module reads HIGH during daylight.
