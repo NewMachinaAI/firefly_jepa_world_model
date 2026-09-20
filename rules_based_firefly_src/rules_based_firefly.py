@@ -2,7 +2,6 @@ import argparse
 import csv
 import random
 import time
-from datetime import datetime
 from pathlib import Path
 
 from gpiozero import DigitalInputDevice, LED
@@ -42,7 +41,8 @@ def main():
     period = args.interval_ms / 1000.0
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"firefly_{datetime.now():%Y%m%d_%H%M%S}.csv"
+    # Fixed filename, opened with "w" below: each run overwrites the previous run's samples
+    out_path = out_dir / "Firefly_Raw_Samples.csv"
 
     # Default LM393 modules output HIGH (1) in dark, LOW (0) in light.
     # Adjust DARK_LEVEL if your module reads HIGH during daylight.
@@ -93,6 +93,7 @@ def main():
                     active_mode,
                     scenario_tag(prev_ldr, ldr_raw),
                 ])
+                print(f"[{index}] ldr_raw = {ldr_raw} ({'light' if ldr_raw else 'dark'})")
                 if index % 50 == 0:
                     f.flush()
 
