@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from safetensors.torch import load_file
 
-from container_encoder_train_src.firefly_encoder_train import Encoder, OUT_DIR
+from container_encoder_predictor_train_src.firefly_encoder_predictor_train import Encoder, OUT_DIR
 
 app = FastAPI(title="Firefly Encoder Inference")
 model: Encoder = None
