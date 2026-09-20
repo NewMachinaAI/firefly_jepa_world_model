@@ -35,7 +35,7 @@ def scenario_tag(prev_ldr, ldr):
 def main():
     parser = argparse.ArgumentParser(description="Rules-based firefly with data logging.")
     parser.add_argument("--interval-ms", type=float, default=100.0, help="Sampling interval in ms (default 100)")
-    parser.add_argument("--out-dir", default="data/training_data", help="Directory for CSV output")
+    parser.add_argument("--out-dir", default=str(Path.home() / "Documents/GitHub/firefly_jepa_world_model/data/training_data"), help="Directory for CSV output")
     args = parser.parse_args()
 
     period = args.interval_ms / 1000.0
