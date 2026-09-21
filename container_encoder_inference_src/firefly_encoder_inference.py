@@ -57,7 +57,7 @@ def main():
     parser.add_argument("--weights-path", default=str(ENCODER_WEIGHTS_PATH))
     parser.add_argument("--config-path", default=str(ENCODER_CONFIG_PATH))
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8001, help="Port to bind (default: 8001)")
+    parser.add_argument("--port", type=int, default=8006, help="Port to bind (default: 8006)")
     args = parser.parse_args()
 
     global model

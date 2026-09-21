@@ -79,8 +79,8 @@ def run_cycle(session: requests.Session, history: deque, encoder_url: str, predi
 
 def main():
     parser = argparse.ArgumentParser(description="Run the Firefly encoder -> predictor -> policy control loop.")
-    parser.add_argument("--encoder-url", default="http://127.0.0.1:8001", help="Base URL of the encoder service")
-    parser.add_argument("--predictor-url", "--predicter-url", dest="predictor_url", default="http://127.0.0.1:8002",
+    parser.add_argument("--encoder-url", default="http://127.0.0.1:8006", help="Base URL of the encoder service")
+    parser.add_argument("--predictor-url", "--predicter-url", dest="predictor_url", default="http://127.0.0.1:8007",
                         help="Base URL of the predictor service")
     parser.add_argument("--policy-url", default="http://127.0.0.1:8005", help="Base URL of the policy service")
     parser.add_argument("--interval-ms", type=float, default=100.0, help="Loop interval in ms (default 100)")

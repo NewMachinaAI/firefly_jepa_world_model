@@ -13,14 +13,14 @@ services:
     container_name: firefly_encoder_inference
     command: ["container_encoder_inference_src/firefly_encoder_inference.py", "--host", "0.0.0.0"]
     ports:
-      - "8001:8001"
+      - "8006:8006"
     volumes:
       - ./data:/app/data:ro
     depends_on:
       encoder-predictor-train:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -31,14 +31,14 @@ services:
     container_name: firefly_predicter_inference
     command: ["container_predicter_inference_src/firefly_predicter_inference.py", "--host", "0.0.0.0"]
     ports:
-      - "8002:8002"
+      - "8007:8007"
     volumes:
       - ./data:/app/data:ro
     depends_on:
       encoder-predictor-train:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -68,8 +68,8 @@ services:
     command:
       [
         "container_harness_src/firefly_harness.py",
-        "--encoder-url", "http://encoder-inference:8001",
-        "--predictor-url", "http://predicter-inference:8002",
+        "--encoder-url", "http://encoder-inference:8006",
+        "--predictor-url", "http://predicter-inference:8007",
         "--policy-url", "http://policy-inference:8005",
         "--interval-ms", "100",
       ]

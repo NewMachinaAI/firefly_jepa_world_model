@@ -2,7 +2,7 @@
   "name": "Firefly JEPA World Model",
   "build": { "dockerfile": "Dockerfile" },
   "remoteUser": "vscode",
-  "forwardPorts": [8001, 8002, 8005],
+  "forwardPorts": [8006, 8007, 8005],
   "customizations": {
     "vscode": {
       "extensions": [
