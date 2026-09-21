@@ -1,48 +1,68 @@
-"""FastAPI inference service for a Firefly policy saved by
-firefly_policy_train.py.
+"""FastAPI inference service for the Firefly policy.
 
-Loads model.safetensors + config.json from a model directory and serves a
-POST endpoint that chooses an action given a latent embedding.
+The policy has no neural network: it is an implicit policy using one-step
+latent MPC. The harness sends the predictor's next-latent prediction for each
+candidate LED action; the policy assigns each candidate a scalar cost from the
+mean of its predicted latent and returns the cheapest action.
+
+    Light (mean latent on the light side of the threshold):
+        cost(a=0) = 0, cost(a=1) = 1                  -> LED stays off
+    Dark:
+        cost(a=0) = 0
+        cost(a=1) = -1 with probability flash_probability, else +1
+                                                       -> random firefly pulses
+
+The threshold and its orientation are calibrated by the training script and
+read from data/model_data/policy/config.json at startup.
 
 Example:
-    POST /act {"embedding": [...]}
-    -> {"action": [...], "action_dim": 4}
+    POST /act {"candidates": [{"action": 0, "predicted_latent": [...]},
+                              {"action": 1, "predicted_latent": [...]}]}
+    -> {"action": 1, "costs": [0.0, -1.0]}
 """
 
 import argparse
 import json
-import os
+import random
+from pathlib import Path
 
-import torch
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel
-from safetensors.torch import load_file
+from pydantic import BaseModel, Field
 
-from container_policy_train_src.firefly_policy_train import Policy, OUT_DIR
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "model_data" / "policy" / "config.json"
 
 app = FastAPI(title="Firefly Policy Inference")
-model: Policy = None
+policy_config = {"threshold": 0.0, "light_above_threshold": True, "flash_probability": 0.1}
+
+
+class Candidate(BaseModel):
+    action: int
+    predicted_latent: list[float] = Field(min_length=1)
 
 
 class ActRequest(BaseModel):
-    embedding: list[float]
+    candidates: list[Candidate] = Field(min_length=1)
 
 
 class ActionResponse(BaseModel):
-    action: list[float]
-    action_dim: int
+    action: int
+    costs: list[float]
 
 
-def load_model(model_dir: str) -> Policy:
-    with open(os.path.join(model_dir, "config.json")) as f:
-        config = json.load(f)
+def is_light(latent: list[float]) -> bool:
+    mean = sum(latent) / len(latent)
+    if policy_config["light_above_threshold"]:
+        return mean >= policy_config["threshold"]
+    return mean < policy_config["threshold"]
 
-    loaded = Policy(embedding_dim=config["embedding_dim"], action_dim=config["action_dim"])
-    state_dict = load_file(os.path.join(model_dir, "model.safetensors"))
-    loaded.load_state_dict(state_dict)
-    loaded.eval()
-    return loaded
+
+def candidate_cost(candidate: Candidate) -> float:
+    if candidate.action == 0:
+        return 0.0
+    if is_light(candidate.predicted_latent):
+        return 1.0
+    return -1.0 if random.random() < policy_config["flash_probability"] else 1.0
 
 
 @app.get("/health")
@@ -52,25 +72,29 @@ def health():
 
 @app.post("/act", response_model=ActionResponse)
 def act(request: ActRequest):
-    with torch.no_grad():
-        x = torch.tensor([request.embedding], dtype=torch.float32)
-        action = model(x)[0].tolist()
-    return ActionResponse(action=action, action_dim=len(action))
+    costs = [candidate_cost(c) for c in request.candidates]
+    best = min(range(len(costs)), key=lambda i: (costs[i], request.candidates[i].action))
+    return ActionResponse(action=request.candidates[best].action, costs=costs)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Serve FastAPI inference for a trained Firefly policy.")
-    parser.add_argument(
-        "--model-dir",
-        default=OUT_DIR,
-        help=f"Directory containing model.safetensors and config.json (default: {OUT_DIR})",
-    )
+    parser = argparse.ArgumentParser(description="Serve FastAPI inference for the Firefly policy.")
+    parser.add_argument("--config-path", default=str(DEFAULT_CONFIG_PATH))
+    parser.add_argument("--threshold", type=float, help="Override the calibrated mean-latent threshold")
+    parser.add_argument("--flash-probability", type=float, help="Override the dark-condition flash probability")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8003, help="Port to bind (default: 8003)")
     args = parser.parse_args()
 
-    global model
-    model = load_model(args.model_dir)
+    config_path = Path(args.config_path)
+    if config_path.exists():
+        policy_config.update(json.loads(config_path.read_text()))
+    else:
+        print(f"WARNING: {config_path} not found; using uncalibrated defaults ({policy_config}).")
+    if args.threshold is not None:
+        policy_config["threshold"] = args.threshold
+    if args.flash_probability is not None:
+        policy_config["flash_probability"] = args.flash_probability
 
     uvicorn.run(app, host=args.host, port=args.port)
 

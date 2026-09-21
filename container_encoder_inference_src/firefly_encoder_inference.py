@@ -1,25 +1,26 @@
-"""FastAPI inference service for a Firefly encoder saved by
-firefly_encoder_train.py.
+"""FastAPI inference service for the Firefly context encoder saved by
+firefly_encoder_predictor_train.py.
 
-Loads model.safetensors + config.json from a model directory and serves a
-POST endpoint that encodes an observation vector into a latent embedding.
+Loads model.safetensors and config.json at startup and serves a POST endpoint
+that encodes a 16-sample light history into a latent state.
 
 Example:
-    POST /encode {"observation": [0.1, 0.2, ...]}
-    -> {"embedding": [...], "embedding_dim": 16}
+    POST /encode {"observation": [0, 0, 1, ...]}    (16 values, 0 = dark, 1 = light)
+    -> {"embedding": [...], "embedding_dim": 8}
 """
 
 import argparse
-import json
-import os
 
 import torch
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from safetensors.torch import load_file
 
-from container_encoder_predictor_train_src.firefly_encoder_predictor_train import Encoder, OUT_DIR
+from container_encoder_predictor_train_src.firefly_encoder_predictor_train import (
+    ENCODER_CONFIG_PATH,
+    ENCODER_WEIGHTS_PATH,
+    Encoder,
+)
 
 app = FastAPI(title="Firefly Encoder Inference")
 model: Encoder = None
@@ -34,17 +35,6 @@ class EmbeddingResponse(BaseModel):
     embedding_dim: int
 
 
-def load_model(model_dir: str) -> Encoder:
-    with open(os.path.join(model_dir, "config.json")) as f:
-        config = json.load(f)
-
-    loaded = Encoder(observation_dim=config["observation_dim"], embedding_dim=config["embedding_dim"])
-    state_dict = load_file(os.path.join(model_dir, "model.safetensors"))
-    loaded.load_state_dict(state_dict)
-    loaded.eval()
-    return loaded
-
-
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -52,25 +42,26 @@ def health():
 
 @app.post("/encode", response_model=EmbeddingResponse)
 def encode(request: ObservationRequest):
+    expected = model.config["input_length"]
+    if len(request.observation) != expected:
+        raise HTTPException(status_code=422, detail=f"observation must have {expected} values")
+
     with torch.no_grad():
-        x = torch.tensor([request.observation], dtype=torch.float32)
+        x = torch.tensor([request.observation], dtype=torch.float32).unsqueeze(1)  # (1, 1, L)
         embedding = model(x)[0].tolist()
     return EmbeddingResponse(embedding=embedding, embedding_dim=len(embedding))
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Serve FastAPI inference for a trained Firefly encoder.")
-    parser.add_argument(
-        "--model-dir",
-        default=OUT_DIR,
-        help=f"Directory containing model.safetensors and config.json (default: {OUT_DIR})",
-    )
+    parser = argparse.ArgumentParser(description="Serve FastAPI inference for the trained Firefly encoder.")
+    parser.add_argument("--weights-path", default=str(ENCODER_WEIGHTS_PATH))
+    parser.add_argument("--config-path", default=str(ENCODER_CONFIG_PATH))
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8001, help="Port to bind (default: 8001)")
     args = parser.parse_args()
 
     global model
-    model = load_model(args.model_dir)
+    model = Encoder.from_pretrained(args.config_path, args.weights_path)
 
     uvicorn.run(app, host=args.host, port=args.port)
 

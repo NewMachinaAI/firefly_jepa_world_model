@@ -1,27 +1,11 @@
 services:
-  encoder-train:
+  encoder-predictor-train:
     build: .
-    image: newmachinaai/newmachina_firefly_encoder_train:latest
-    container_name: firefly_encoder_train
-    command: ["container_encoder_train_src/firefly_encoder_train.py"]
+    image: newmachinaai/newmachina_firefly_encoder_predictor_train:latest
+    container_name: firefly_encoder_predictor_train
+    command: ["container_encoder_predictor_train_src/firefly_encoder_predictor_train.py"]
     volumes:
-      - encoder-model-data:/app/encoder_model
-
-  predicter-train:
-    build: .
-    image: newmachinaai/newmachina_firefly_predicter_train:latest
-    container_name: firefly_predicter_train
-    command: ["container_predicter_train_src/firefly_predicter_train.py"]
-    volumes:
-      - predicter-model-data:/app/predicter_model
-
-  policy-train:
-    build: .
-    image: newmachinaai/newmachina_firefly_policy_train:latest
-    container_name: firefly_policy_train
-    command: ["container_policy_train_src/firefly_policy_train.py"]
-    volumes:
-      - policy-model-data:/app/policy_model
+      - ./data:/app/data
 
   encoder-inference:
     build: .
@@ -31,9 +15,9 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - encoder-model-data:/app/encoder_model
+      - ./data:/app/data:ro
     depends_on:
-      encoder-train:
+      encoder-predictor-train:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
@@ -49,9 +33,9 @@ services:
     ports:
       - "8002:8002"
     volumes:
-      - predicter-model-data:/app/predicter_model
+      - ./data:/app/data:ro
     depends_on:
-      predicter-train:
+      encoder-predictor-train:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
@@ -67,9 +51,9 @@ services:
     ports:
       - "8003:8003"
     volumes:
-      - policy-model-data:/app/policy_model
+      - ./data:/app/data:ro
     depends_on:
-      policy-train:
+      encoder-predictor-train:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
@@ -85,10 +69,13 @@ services:
       [
         "container_harness_src/firefly_harness.py",
         "--encoder-url", "http://encoder-inference:8001",
-        "--predicter-url", "http://predicter-inference:8002",
+        "--predictor-url", "http://predicter-inference:8002",
         "--policy-url", "http://policy-inference:8003",
-        "--interval", "60",
+        "--interval-ms", "100",
       ]
+    # Raspberry Pi GPIO access for the light sensor (GPIO 17) and LED (GPIO 18)
+    devices:
+      - /dev/gpiochip0:/dev/gpiochip0
     depends_on:
       encoder-inference:
         condition: service_healthy
@@ -96,8 +83,3 @@ services:
         condition: service_healthy
       policy-inference:
         condition: service_healthy
-
-volumes:
-  encoder-model-data:
-  predicter-model-data:
-  policy-model-data:
