@@ -83,7 +83,7 @@ def main():
     parser.add_argument("--threshold", type=float, help="Override the calibrated mean-latent threshold")
     parser.add_argument("--flash-probability", type=float, help="Override the dark-condition flash probability")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8004, help="Port to bind (default: 8004)")
+    parser.add_argument("--port", type=int, default=8005, help="Port to bind (default: 8005)")
     args = parser.parse_args()
 
     config_path = Path(args.config_path)

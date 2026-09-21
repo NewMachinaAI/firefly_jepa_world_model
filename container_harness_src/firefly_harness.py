@@ -82,7 +82,7 @@ def main():
     parser.add_argument("--encoder-url", default="http://127.0.0.1:8001", help="Base URL of the encoder service")
     parser.add_argument("--predictor-url", "--predicter-url", dest="predictor_url", default="http://127.0.0.1:8002",
                         help="Base URL of the predictor service")
-    parser.add_argument("--policy-url", default="http://127.0.0.1:8004", help="Base URL of the policy service")
+    parser.add_argument("--policy-url", default="http://127.0.0.1:8005", help="Base URL of the policy service")
     parser.add_argument("--interval-ms", type=float, default=100.0, help="Loop interval in ms (default 100)")
     parser.add_argument("--dry-run", action="store_true", help="Simulate the sensor and LED instead of using GPIO")
     args = parser.parse_args()
