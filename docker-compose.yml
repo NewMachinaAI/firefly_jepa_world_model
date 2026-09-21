@@ -76,6 +76,8 @@ services:
     # Raspberry Pi GPIO access for the light sensor (GPIO 17) and LED (GPIO 18)
     devices:
       - /dev/gpiochip0:/dev/gpiochip0
+    volumes:
+      - ./data:/app/data:ro
     depends_on:
       encoder-inference:
         condition: service_healthy
