@@ -143,6 +143,15 @@ def save_pretrained(model: nn.Module, weights_path, config_path):
 
 def load_samples(csv_path):
     """Returns (ldr_raw, led_state) as float32 arrays, in file order."""
+    csv_path = Path(csv_path)
+    if not csv_path.is_file():
+        folder = csv_path.parent
+        found = sorted(p.name for p in folder.iterdir()) if folder.is_dir() else None
+        raise FileNotFoundError(
+            f"Training data not found: {csv_path}\n"
+            f"  Folder exists: {folder.is_dir()}; contents: {found}\n"
+            "  In Docker this is the host's ./data/training_data (next to docker-compose.yml) mounted at /app/data."
+        )
     ldr, led = [], []
     with open(csv_path, newline="") as f:
         for row in csv.DictReader(f):
