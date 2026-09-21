@@ -47,16 +47,16 @@ services:
     build: .
     image: newmachinaai/newmachina_firefly_policy_inference:latest
     container_name: firefly_policy_inference
-    command: ["container_policy_inference_src/firefly_policy_inference.py", "--host", "0.0.0.0"]
+    command: ["container_policy_inference_src/firefly_policy_inference.py", "--host", "0.0.0.0", "--port", "8004"]
     ports:
-      - "8003:8003"
+      - "8004:8004"
     volumes:
       - ./data:/app/data:ro
     depends_on:
       encoder-predictor-train:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -70,7 +70,7 @@ services:
         "container_harness_src/firefly_harness.py",
         "--encoder-url", "http://encoder-inference:8001",
         "--predictor-url", "http://predicter-inference:8002",
-        "--policy-url", "http://policy-inference:8003",
+        "--policy-url", "http://policy-inference:8004",
         "--interval-ms", "100",
       ]
     # Raspberry Pi GPIO access for the light sensor (GPIO 17) and LED (GPIO 18)
